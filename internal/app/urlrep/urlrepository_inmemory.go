@@ -5,16 +5,16 @@ import (
 	"sync"
 )
 
-type inMemoryUrlRepository struct {
+type inMemoryURLRepository struct {
 	urls sync.Map
 }
 
-func NewInMemory() UrlRepository {
-	return &inMemoryUrlRepository{}
+func NewInMemory() URLRepository {
+	return &inMemoryURLRepository{}
 }
 
-func (r *inMemoryUrlRepository) Set(url string) string {
-	id := r.GenerateId(url)
+func (r *inMemoryURLRepository) Set(url string) string {
+	id := r.GenerateID(url)
 	if _, ok := r.urls.Load(id); ok {
 		return r.Set(url)
 	}
@@ -22,7 +22,7 @@ func (r *inMemoryUrlRepository) Set(url string) string {
 	return id
 }
 
-func (r *inMemoryUrlRepository) Get(id string) string {
+func (r *inMemoryURLRepository) Get(id string) string {
 	url, ok := r.urls.Load(id)
 	if ok {
 		return url.(string)
@@ -30,6 +30,6 @@ func (r *inMemoryUrlRepository) Get(id string) string {
 	return ""
 }
 
-func (*inMemoryUrlRepository) GenerateId(url string) string {
+func (*inMemoryURLRepository) GenerateID(url string) string {
 	return uuid.New().String()[:8]
 }

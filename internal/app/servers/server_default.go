@@ -1,4 +1,4 @@
-package server
+package servers
 
 import (
 	"github.com/dmitribauer/go-url-shortener/internal/app/urlrep"
@@ -8,30 +8,35 @@ import (
 )
 
 type defaultServer struct {
-	urlRepository urlrep.UrlRepository
+	urlRepository urlrep.URLRepository
 }
 
-func NewDefault(urlRepository urlrep.UrlRepository) Server {
+func NewDefault(urlRepository urlrep.URLRepository) Server {
 	return &defaultServer{
 		urlRepository: urlRepository,
 	}
 }
 
 func (s *defaultServer) Start() error {
-	http.HandleFunc("/post", s.postUrl)
-	http.HandleFunc("/get/", s.getUrl)
+	http.HandleFunc("/", s.handleRoot)
 	httpServ := &http.Server{
 		Addr: ":8080",
 	}
 	return httpServ.ListenAndServe()
 }
 
-func (s *defaultServer) postUrl(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+func (s *defaultServer) handleRoot(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		s.postURL(w, r)
+	case http.MethodGet:
+		s.getURL(w, r)
+	default:
 		w.WriteHeader(http.StatusBadRequest)
-		return
 	}
+}
 
+func (s *defaultServer) postURL(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
 
@@ -57,13 +62,8 @@ func (s *defaultServer) postUrl(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(id))
 }
 
-func (s *defaultServer) getUrl(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	id := r.URL.Path[len("/get/"):]
+func (s *defaultServer) getURL(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Path[len("/"):]
 	if id == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
