@@ -42,8 +42,7 @@ func (rest *Rest) handleRoot(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		rest.handleRootGet(w, r)
 	default:
-		w.Header().Set("Allow", "POST, GET")
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
 
