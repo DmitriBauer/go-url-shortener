@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/dmitribauer/go-url-shortener/internal/app/urlrep"
 	"github.com/dmitribauer/go-url-shortener/internal/app/utils"
+	"github.com/go-chi/chi/v5"
 	"io/ioutil"
 	"net/http"
 )
@@ -24,11 +25,14 @@ func NewRest(urlRepository urlrep.URLRepository) *Rest {
 }
 
 func (rest *Rest) Run(address string, port int) error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", rest.handleRoot)
+	router := chi.NewRouter()
+	router.Route("/", func(r chi.Router) {
+		r.Post("/", rest.handleRoot)
+		r.Get("/{id}", rest.handleRoot)
+	})
 	rest.httpServer = &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", address, port),
-		Handler: mux,
+		Handler: router,
 	}
 	rest.address = address
 	rest.port = port
@@ -42,8 +46,7 @@ func (rest *Rest) handleRoot(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		rest.handleRootGet(w, r)
 	default:
-		w.Header().Set("Allow", "POST, GET")
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
 

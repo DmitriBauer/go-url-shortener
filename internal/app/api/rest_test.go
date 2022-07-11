@@ -127,6 +127,7 @@ func TestRest_handleRoot_GET(t *testing.T) {
 			w := httptest.NewRecorder()
 			rest.handleRoot(w, req)
 			res := w.Result()
+			res.Body.Close() // statictest
 
 			assert.Equal(t, tt.want.code, res.StatusCode)
 
@@ -142,8 +143,7 @@ func TestRest_handleRoot_OtherRESTMethods(t *testing.T) {
 		method string
 	}
 	type want struct {
-		code    int
-		headers map[string]string
+		code int
 	}
 	tests := []struct {
 		name string
@@ -153,37 +153,37 @@ func TestRest_handleRoot_OtherRESTMethods(t *testing.T) {
 		{
 			name: "HEAD",
 			args: args{http.MethodHead},
-			want: want{http.StatusBadRequest, map[string]string{"Allow": "POST, GET"}},
+			want: want{http.StatusMethodNotAllowed},
 		},
 		{
 			name: "PUT",
 			args: args{http.MethodPut},
-			want: want{http.StatusBadRequest, map[string]string{"Allow": "POST, GET"}},
+			want: want{http.StatusMethodNotAllowed},
 		},
 		{
 			name: "DELETE",
 			args: args{http.MethodDelete},
-			want: want{http.StatusBadRequest, map[string]string{"Allow": "POST, GET"}},
+			want: want{http.StatusMethodNotAllowed},
 		},
 		{
 			name: "CONNECT",
 			args: args{http.MethodConnect},
-			want: want{http.StatusBadRequest, map[string]string{"Allow": "POST, GET"}},
+			want: want{http.StatusMethodNotAllowed},
 		},
 		{
 			name: "OPTIONS",
 			args: args{http.MethodOptions},
-			want: want{http.StatusBadRequest, map[string]string{"Allow": "POST, GET"}},
+			want: want{http.StatusMethodNotAllowed},
 		},
 		{
 			name: "TRACE",
 			args: args{http.MethodTrace},
-			want: want{http.StatusBadRequest, map[string]string{"Allow": "POST, GET"}},
+			want: want{http.StatusMethodNotAllowed},
 		},
 		{
 			name: "PATCH",
 			args: args{http.MethodPatch},
-			want: want{http.StatusBadRequest, map[string]string{"Allow": "POST, GET"}},
+			want: want{http.StatusMethodNotAllowed},
 		},
 	}
 
@@ -203,12 +203,9 @@ func TestRest_handleRoot_OtherRESTMethods(t *testing.T) {
 			w := httptest.NewRecorder()
 			rest.handleRoot(w, req)
 			res := w.Result()
+			res.Body.Close() // statictest
 
 			assert.Equal(t, tt.want.code, res.StatusCode)
-
-			for k, v := range tt.want.headers {
-				assert.Equal(t, v, res.Header.Get(k))
-			}
 		})
 	}
 }
