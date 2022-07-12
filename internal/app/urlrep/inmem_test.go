@@ -10,49 +10,50 @@ import (
 func TestNewInMemory(t *testing.T) {
 	r := NewInMemory(nil)
 
-	assert.Equal(t, reflect.TypeOf(&inMemoryURLRepository{}), reflect.TypeOf(r))
+	assert.Equal(t, reflect.TypeOf(&inMemURLRepo{}), reflect.TypeOf(r))
 }
 
-func TestInMemoryURLRepository_Get(t *testing.T) {
+func TestInMemURLRepo_URLByID(t *testing.T) {
 	id := "ID"
 	urlIDGenerator := func(url string) string {
 		return id
 	}
-	r := &inMemoryURLRepository{
+	r := &inMemURLRepo{
 		urlIDGenerator: urlIDGenerator,
 	}
 
-	require.Equal(t, "", r.Get(id))
+	require.Equal(t, "", r.URLByID(id))
 
-	r.Set("https://www.yandex.ru")
+	r.Save("https://www.yandex.ru")
 
-	assert.Equal(t, "https://www.yandex.ru", r.Get(id))
+	assert.Equal(t, "https://www.yandex.ru", r.URLByID(id))
 }
 
-func TestInMemoryURLRepository_Set(t *testing.T) {
+func TestInMemURLRepo_Save(t *testing.T) {
 	id := "ID"
+	url := "https://www.yandex.ru"
 	urlIDGenerator := func(url string) string {
 		return id
 	}
-	r := &inMemoryURLRepository{
+	r := &inMemURLRepo{
 		urlIDGenerator: urlIDGenerator,
 	}
 
-	require.Equal(t, "", r.Get(id))
+	require.Equal(t, "", r.URLByID(id))
 
-	urlID := r.Set("https://www.yandex.ru")
+	urlID := r.Save(url)
 
 	assert.Equal(t, id, urlID)
-	assert.Equal(t, "https://www.yandex.ru", r.Get(urlID))
+	assert.Equal(t, url, r.URLByID(urlID))
 }
 
-func TestInMemoryURLRepository_GenerateID(t *testing.T) {
+func TestInMemURLRepo_GenerateID(t *testing.T) {
 	id := "GenID"
 	urlIDGenerator := func(url string) string {
 		return id
 	}
 
-	r := &inMemoryURLRepository{
+	r := &inMemURLRepo{
 		urlIDGenerator: urlIDGenerator,
 	}
 

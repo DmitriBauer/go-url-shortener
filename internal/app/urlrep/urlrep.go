@@ -1,11 +1,11 @@
 package urlrep
 
-type URLRepository interface {
-	// Get gets a url by id.
-	Get(id string) string
+type URLRepo interface {
+	// URLByID gives a url by id or an empty string if the requested URL is absent.
+	URLByID(id string) string
 
-	// Set saves the url and returns its id.
-	Set(url string) string
+	// Save saves the URL and returns its id for further receiving the URL by this id.
+	Save(url string) string
 
 	// GenerateID generates an id for a given url.
 	GenerateID(url string) string

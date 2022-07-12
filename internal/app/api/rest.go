@@ -4,28 +4,32 @@ import (
 	"fmt"
 	"github.com/dmitribauer/go-url-shortener/internal/app/urlrep"
 	"github.com/dmitribauer/go-url-shortener/internal/app/utils"
-	"io/ioutil"
+	"github.com/go-chi/chi/v5"
+	"io"
 	"net/http"
 )
 
 type Rest struct {
-	address       string
-	port          int
-	urlRepository urlrep.URLRepository
-	httpServer    *http.Server
+	address    string
+	port       int
+	urlRepo    urlrep.URLRepo
+	httpServer *http.Server
 }
 
-func NewRest(urlRepository urlrep.URLRepository) *Rest {
+func NewRest(urlRepo urlrep.URLRepo) *Rest {
 	return &Rest{
-		address:       "localhost",
-		port:          8080,
-		urlRepository: urlRepository,
+		address: "localhost",
+		port:    8080,
+		urlRepo: urlRepo,
 	}
 }
 
 func (rest *Rest) Run(address string, port int) error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", rest.handleRoot)
+	mux := chi.NewMux()
+	mux.Route("/", func(r chi.Router) {
+		r.Post("/", rest.handleRoot)
+		r.Get("/{id}", rest.handleRoot)
+	})
 	rest.httpServer = &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", address, port),
 		Handler: mux,
@@ -48,7 +52,7 @@ func (rest *Rest) handleRoot(w http.ResponseWriter, r *http.Request) {
 
 func (rest *Rest) handleRootPost(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -66,7 +70,7 @@ func (rest *Rest) handleRootPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := rest.urlRepository.Set(url)
+	id := rest.urlRepo.Save(url)
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(fmt.Sprintf("http://%s:%d/%s", rest.address, rest.port, id)))
 }
@@ -80,7 +84,7 @@ func (rest *Rest) handleRootGet(w http.ResponseWriter, r *http.Request) {
 
 	id := path[1:]
 
-	url := rest.urlRepository.Get(id)
+	url := rest.urlRepo.URLByID(id)
 	if url == "" {
 		w.WriteHeader(http.StatusNotFound)
 		return
