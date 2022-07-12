@@ -6,9 +6,6 @@ import (
 )
 
 func Test_CheckIsURL(t *testing.T) {
-	type args struct {
-		s string
-	}
 	tests := []struct {
 		name string
 		url  string
