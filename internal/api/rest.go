@@ -2,11 +2,13 @@ package api
 
 import (
 	"fmt"
-	"github.com/dmitribauer/go-url-shortener/internal/app/urlrep"
-	"github.com/dmitribauer/go-url-shortener/internal/app/utils"
-	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+
+	"github.com/dmitribauer/go-url-shortener/internal/urlrep"
+	"github.com/dmitribauer/go-url-shortener/internal/utils"
 )
 
 type Rest struct {

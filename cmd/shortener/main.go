@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/dmitribauer/go-url-shortener/internal/app/api"
-	"github.com/dmitribauer/go-url-shortener/internal/app/urlrep"
+	"github.com/dmitribauer/go-url-shortener/internal/api"
+	"github.com/dmitribauer/go-url-shortener/internal/urlrep"
 )
 
 func main() {
