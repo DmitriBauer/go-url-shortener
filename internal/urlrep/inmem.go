@@ -1,8 +1,9 @@
 package urlrep
 
 import (
-	"github.com/google/uuid"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 type inMemURLRepo struct {
@@ -10,6 +11,7 @@ type inMemURLRepo struct {
 	urlIDGenerator func(url string) string
 }
 
+// NewInMemory returns new in-memory URL repository.
 func NewInMemory(urlIDGenerator func(url string) string) URLRepo {
 	if urlIDGenerator == nil {
 		urlIDGenerator = func(url string) string {
@@ -21,12 +23,12 @@ func NewInMemory(urlIDGenerator func(url string) string) URLRepo {
 	}
 }
 
-func (r *inMemURLRepo) URLByID(id string) string {
+func (r *inMemURLRepo) URLByID(id string) (string, bool) {
 	url, ok := r.urls.Load(id)
-	if ok {
-		return url.(string)
+	if !ok {
+		return "", false
 	}
-	return ""
+	return url.(string), true
 }
 
 func (r *inMemURLRepo) Save(url string) string {

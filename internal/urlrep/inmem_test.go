@@ -1,10 +1,11 @@
 package urlrep
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewInMemory(t *testing.T) {
@@ -15,6 +16,7 @@ func TestNewInMemory(t *testing.T) {
 
 func TestInMemURLRepo_URLByID(t *testing.T) {
 	id := "ID"
+	url := "https://www.yandex.ru"
 	urlIDGenerator := func(url string) string {
 		return id
 	}
@@ -22,11 +24,15 @@ func TestInMemURLRepo_URLByID(t *testing.T) {
 		urlIDGenerator: urlIDGenerator,
 	}
 
-	require.Equal(t, "", r.URLByID(id))
+	u, ok := r.URLByID(id)
+	require.Equal(t, "", u)
+	require.Equal(t, false, ok)
 
-	r.Save("https://www.yandex.ru")
+	r.Save(url)
 
-	assert.Equal(t, "https://www.yandex.ru", r.URLByID(id))
+	u, ok = r.URLByID(id)
+	assert.Equal(t, url, u)
+	assert.Equal(t, true, ok)
 }
 
 func TestInMemURLRepo_Save(t *testing.T) {
@@ -39,12 +45,16 @@ func TestInMemURLRepo_Save(t *testing.T) {
 		urlIDGenerator: urlIDGenerator,
 	}
 
-	require.Equal(t, "", r.URLByID(id))
+	u, ok := r.URLByID(id)
+	require.Equal(t, "", u)
+	require.Equal(t, false, ok)
 
 	urlID := r.Save(url)
 
+	u, ok = r.URLByID(id)
 	assert.Equal(t, id, urlID)
-	assert.Equal(t, url, r.URLByID(urlID))
+	assert.Equal(t, url, u)
+	assert.Equal(t, true, ok)
 }
 
 func TestInMemURLRepo_GenerateID(t *testing.T) {

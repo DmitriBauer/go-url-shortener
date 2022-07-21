@@ -2,11 +2,13 @@ package api
 
 import (
 	"fmt"
-	"github.com/dmitribauer/go-url-shortener/internal/app/urlrep"
-	"github.com/dmitribauer/go-url-shortener/internal/app/utils"
-	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+
+	"github.com/dmitribauer/go-url-shortener/internal/urlrep"
+	"github.com/dmitribauer/go-url-shortener/internal/util"
 )
 
 type Rest struct {
@@ -65,7 +67,7 @@ func (rest *Rest) handleRootPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !utils.CheckIsURL(url) {
+	if !util.CheckIsURL(url) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -84,8 +86,8 @@ func (rest *Rest) handleRootGet(w http.ResponseWriter, r *http.Request) {
 
 	id := path[1:]
 
-	url := rest.urlRepo.URLByID(id)
-	if url == "" {
+	url, ok := rest.urlRepo.URLByID(id)
+	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}

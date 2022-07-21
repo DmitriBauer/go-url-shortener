@@ -3,12 +3,14 @@ package api
 import (
 	"bytes"
 	"fmt"
-	"github.com/dmitribauer/go-url-shortener/internal/app/urlrep"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/dmitribauer/go-url-shortener/internal/urlrep"
 )
 
 func TestRest_handleRoot_POST(t *testing.T) {
