@@ -8,7 +8,7 @@ import (
 func main() {
 	urlRepo := urlrep.NewInMemory(nil)
 	rest := api.NewRest(urlRepo)
-	err := rest.Run("localhost", 8080)
+	err := api.Run(rest, "localhost", 8080)
 	if err != nil {
 		panic(err)
 	}
