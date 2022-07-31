@@ -1,4 +1,4 @@
-package api
+package handlers
 
 import (
 	"bytes"
@@ -10,10 +10,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	apirest "github.com/dmitribauer/go-url-shortener/internal/api/rest"
+
 	"github.com/dmitribauer/go-url-shortener/internal/urlrep"
 )
 
-func TestRest_handleRoot_POST(t *testing.T) {
+func Test_handleRoot_POST(t *testing.T) {
 	urlID := "ID"
 	type args struct {
 		body []byte
@@ -48,16 +50,20 @@ func TestRest_handleRoot_POST(t *testing.T) {
 			urlIDGenerator := func(url string) string {
 				return urlID
 			}
-			urlRepository := urlrep.NewInMemory(urlIDGenerator)
-			rest := NewRest(urlRepository)
+			urlRepo := urlrep.NewInMemory(urlIDGenerator)
+			rest := &apirest.Rest{
+				Address: "localhost",
+				Port:    8080,
+				URLRepo: urlRepo,
+			}
 
 			req := httptest.NewRequest(
 				http.MethodPost,
-				fmt.Sprintf("http://%s:%d", rest.address, rest.port),
+				fmt.Sprintf("http://%s:%d", rest.Address, rest.Port),
 				bytes.NewReader(tt.args.body),
 			)
 			w := httptest.NewRecorder()
-			rest.handleRoot(w, req)
+			HandleRoot(rest, w, req)
 			res := w.Result()
 
 			assert.Equal(t, tt.want.code, res.StatusCode)
@@ -72,7 +78,7 @@ func TestRest_handleRoot_POST(t *testing.T) {
 	}
 }
 
-func TestRest_handleRoot_GET(t *testing.T) {
+func Test_handleRoot_GET(t *testing.T) {
 	id := "ID"
 	wrongID := "WRONG_ID"
 	url := "https://yandex.ru"
@@ -108,26 +114,30 @@ func TestRest_handleRoot_GET(t *testing.T) {
 	urlIDGenerator := func(url string) string {
 		return id
 	}
-	urlRepository := urlrep.NewInMemory(urlIDGenerator)
-	rest := NewRest(urlRepository)
+	urlRepo := urlrep.NewInMemory(urlIDGenerator)
+	rest := &apirest.Rest{
+		Address: "localhost",
+		Port:    8080,
+		URLRepo: urlRepo,
+	}
 
 	req := httptest.NewRequest(
 		http.MethodPost,
-		fmt.Sprintf("http://%s:%d", rest.address, rest.port),
+		fmt.Sprintf("http://%s:%d", rest.Address, rest.Port),
 		bytes.NewReader([]byte(url)),
 	)
 	w := httptest.NewRecorder()
-	rest.handleRoot(w, req)
+	HandleRoot(rest, w, req)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(
 				http.MethodGet,
-				fmt.Sprintf("http://%s:%d/%s", rest.address, rest.port, tt.args.id),
+				fmt.Sprintf("http://%s:%d/%s", rest.Address, rest.Port, tt.args.id),
 				nil,
 			)
 			w := httptest.NewRecorder()
-			rest.handleRoot(w, req)
+			HandleRoot(rest, w, req)
 			res := w.Result()
 			res.Body.Close() // statictest
 
@@ -140,7 +150,7 @@ func TestRest_handleRoot_GET(t *testing.T) {
 	}
 }
 
-func TestRest_handleRoot_OtherRESTMethods(t *testing.T) {
+func Test_handleRoot_OtherRESTMethods(t *testing.T) {
 	type args struct {
 		method string
 	}
@@ -194,16 +204,20 @@ func TestRest_handleRoot_OtherRESTMethods(t *testing.T) {
 			urlIDGenerator := func(url string) string {
 				return "ID"
 			}
-			urlRepository := urlrep.NewInMemory(urlIDGenerator)
-			rest := NewRest(urlRepository)
+			urlRepo := urlrep.NewInMemory(urlIDGenerator)
+			rest := &apirest.Rest{
+				Address: "localhost",
+				Port:    8080,
+				URLRepo: urlRepo,
+			}
 
 			req := httptest.NewRequest(
 				tt.args.method,
-				fmt.Sprintf("http://%s:%d", rest.address, rest.port),
+				fmt.Sprintf("http://%s:%d", rest.Address, rest.Port),
 				nil,
 			)
 			w := httptest.NewRecorder()
-			rest.handleRoot(w, req)
+			HandleRoot(rest, w, req)
 			res := w.Result()
 			res.Body.Close() // statictest
 
