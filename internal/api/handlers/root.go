@@ -39,7 +39,12 @@ func handleRootPost(rest *rest.Rest, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	urlID := rest.URLRepo.Save(url)
+	urlID, err := rest.URLRepo.Save(url)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(rest.ShortURL(urlID)))
 }

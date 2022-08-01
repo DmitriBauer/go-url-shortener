@@ -1,6 +1,7 @@
 package urlrep
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
@@ -8,19 +9,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewInMemory(t *testing.T) {
-	r := NewInMemory(nil)
+func TestNewInFile(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	path := wd + "/TestNewInFile"
+	defer os.Remove(path)
 
-	assert.Equal(t, reflect.TypeOf(&inMemURLRepo{}), reflect.TypeOf(r))
+	r, _ := NewInFile(path, nil)
+
+	assert.Equal(t, reflect.TypeOf(&inFileURLRepo{}), reflect.TypeOf(r))
 }
 
-func TestInMemURLRepo_URLByID(t *testing.T) {
+func TestInFileURLRepo_URLByID(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	path := wd + "/TestInFileURLRepo_URLByID"
+	defer os.Remove(path)
+
 	id := "ID"
 	url := "https://www.yandex.ru"
+
 	urlIDGenerator := func(url string) string {
 		return id
 	}
-	r := &inMemURLRepo{
+	r := &inFileURLRepo{
+		path:           path,
 		urlIDGenerator: urlIDGenerator,
 	}
 
@@ -35,13 +48,20 @@ func TestInMemURLRepo_URLByID(t *testing.T) {
 	assert.Equal(t, true, ok)
 }
 
-func TestInMemURLRepo_Save(t *testing.T) {
+func TestInFileURLRepo_Save(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	path := wd + "/TestInFileURLRepo_Save"
+	defer os.Remove(path)
+
 	id := "ID"
 	url := "https://www.yandex.ru"
+
 	urlIDGenerator := func(url string) string {
 		return id
 	}
-	r := &inMemURLRepo{
+	r := &inFileURLRepo{
+		path:           path,
 		urlIDGenerator: urlIDGenerator,
 	}
 
@@ -57,13 +77,13 @@ func TestInMemURLRepo_Save(t *testing.T) {
 	assert.Equal(t, true, ok)
 }
 
-func TestInMemURLRepo_GenerateID(t *testing.T) {
+func TestInFileURLRepo_GenerateID(t *testing.T) {
 	id := "GenID"
 	urlIDGenerator := func(url string) string {
 		return id
 	}
 
-	r := &inMemURLRepo{
+	r := &inFileURLRepo{
 		urlIDGenerator: urlIDGenerator,
 	}
 

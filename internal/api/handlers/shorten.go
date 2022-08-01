@@ -36,7 +36,12 @@ func HandleShortenPost(rest *rest.Rest, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	urlID := rest.URLRepo.Save(reqBody.URL)
+	urlID, err := rest.URLRepo.Save(reqBody.URL)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	resBody := shortenResBody{
 		Result: rest.ShortURL(urlID),
 	}
