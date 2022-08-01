@@ -54,6 +54,7 @@ func Test_handleRoot_POST(t *testing.T) {
 			rest := &apirest.Rest{
 				Address: "localhost",
 				Port:    8080,
+				Path:    "/",
 				URLRepo: urlRepo,
 			}
 
@@ -118,6 +119,7 @@ func Test_handleRoot_GET(t *testing.T) {
 	rest := &apirest.Rest{
 		Address: "localhost",
 		Port:    8080,
+		Path:    "/",
 		URLRepo: urlRepo,
 	}
 
@@ -208,6 +210,7 @@ func Test_handleRoot_OtherRESTMethods(t *testing.T) {
 			rest := &apirest.Rest{
 				Address: "localhost",
 				Port:    8080,
+				Path:    "/",
 				URLRepo: urlRepo,
 			}
 

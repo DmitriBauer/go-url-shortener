@@ -46,12 +46,13 @@ func handleRootPost(rest *rest.Rest, w http.ResponseWriter, r *http.Request) {
 
 func handleRootGet(rest *rest.Rest, w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
-	if len(path) < 2 {
+	baseLen := len(rest.Path)
+	if len(path) <= baseLen {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	id := path[1:]
+	id := path[baseLen:]
 
 	url, ok := rest.URLRepo.URLByID(id)
 	if !ok {

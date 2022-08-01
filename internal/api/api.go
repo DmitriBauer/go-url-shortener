@@ -16,9 +16,9 @@ func NewRest(urlRepo urlrep.URLRepo) *rest.Rest {
 	}
 }
 
-func Run(rest *rest.Rest, address string, port int) error {
-	return rest.Run(address, port, func(mux *chi.Mux) {
-		mux.Get("/{id}", func(writer http.ResponseWriter, request *http.Request) {
+func Run(rest *rest.Rest, address string, port int, path string) error {
+	return rest.Run(address, port, path, func(mux *chi.Mux) {
+		mux.Get(rest.Path+"{id}", func(writer http.ResponseWriter, request *http.Request) {
 			handlers.HandleRoot(rest, writer, request)
 		})
 		mux.Post("/", func(writer http.ResponseWriter, request *http.Request) {

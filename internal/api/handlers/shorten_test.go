@@ -59,6 +59,7 @@ func Test_HandleShorten_POST(t *testing.T) {
 			rest := &apirest.Rest{
 				Address: "localhost",
 				Port:    8080,
+				Path:    "/",
 				URLRepo: urlRepo,
 			}
 
