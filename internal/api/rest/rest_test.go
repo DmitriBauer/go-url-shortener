@@ -14,6 +14,7 @@ func TestRest_shortURL(t *testing.T) {
 	rest := Rest{
 		Address:    address,
 		Port:       port,
+		Path:       "/",
 		URLRepo:    nil,
 		httpServer: nil,
 	}
