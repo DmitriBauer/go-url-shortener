@@ -31,13 +31,13 @@ func (r *inMemURLRepo) URLByID(id string) (string, bool) {
 	return url.(string), true
 }
 
-func (r *inMemURLRepo) Save(url string) string {
+func (r *inMemURLRepo) Save(url string) (string, error) {
 	id := r.GenerateID(url)
 	if _, ok := r.urls.Load(id); ok {
 		return r.Save(url)
 	}
 	r.urls.Store(id, url)
-	return id
+	return id, nil
 }
 
 func (r *inMemURLRepo) GenerateID(url string) string {

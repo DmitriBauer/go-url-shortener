@@ -10,11 +10,12 @@ import (
 )
 
 type Config struct {
-	ServerURL string `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
-	BaseURL   string `env:"BASE_URL" envDefault:"http://localhost:8080"`
-	Address   string
-	Port      int
-	Path      string
+	ServerURL       string `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
+	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	Address         string
+	Port            int
+	Path            string
 }
 
 func (cfg *Config) Load() error {
