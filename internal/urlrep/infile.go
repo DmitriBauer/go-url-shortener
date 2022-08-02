@@ -19,6 +19,9 @@ type inFileURLRepo struct {
 // NewInFile returns new in-file URL repository.
 func NewInFile(path string, urlIDGenerator func(url string) string) (URLRepo, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0777)
+	if err != nil {
+		return nil, err
+	}
 	err = f.Close()
 	if err != nil {
 		return nil, err

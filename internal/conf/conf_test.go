@@ -8,8 +8,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// flag provided but not defined: -test.paniconexit0
+// https://github.com/golang/go/issues/31859#issuecomment-489889428
+
+var _ = func() bool {
+	testing.Init()
+	return true
+}()
+
 func TestConfig_Load(t *testing.T) {
-	type env struct {
+	type arg struct {
 		name  string
 		value string
 	}
@@ -19,12 +27,13 @@ func TestConfig_Load(t *testing.T) {
 	}
 	tests := []struct {
 		name string
-		envs []env
+		envs []arg
+		args []arg
 		want want
 	}{
 		{
-			name: "No envs",
-			envs: []env{},
+			name: "No envs, no args",
+			envs: []arg{},
 			want: want{
 				config: Config{
 					ServerURL: "localhost:8080",
@@ -37,8 +46,8 @@ func TestConfig_Load(t *testing.T) {
 			},
 		},
 		{
-			name: "Correct envs",
-			envs: []env{
+			name: "Correct envs, no args",
+			envs: []arg{
 				{name: "SERVER_ADDRESS", value: "127.0.0.1:8080"},
 				{name: "BASE_URL", value: "http://127.0.0.1:8080/short"},
 			},
@@ -54,8 +63,8 @@ func TestConfig_Load(t *testing.T) {
 			},
 		},
 		{
-			name: "Wrong SERVER_ADDRESS",
-			envs: []env{
+			name: "Wrong SERVER_ADDRESS env, no args",
+			envs: []arg{
 				{name: "SERVER_ADDRESS", value: "127.0.0.1:8080:433"},
 				{name: "BASE_URL", value: "http://127.0.0.1:8080/short"},
 			},
@@ -71,8 +80,8 @@ func TestConfig_Load(t *testing.T) {
 			},
 		},
 		{
-			name: "Wrong BASE_URL",
-			envs: []env{
+			name: "Wrong BASE_URL env, no args",
+			envs: []arg{
 				{name: "SERVER_ADDRESS", value: "127.0.0.1:8080"},
 				{name: "BASE_URL", value: "htt://127.0.0.1:8080/short"},
 			},
@@ -89,10 +98,13 @@ func TestConfig_Load(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		for _, env := range tt.envs {
+			os.Setenv(env.name, env.value)
+		}
+		for _, arg := range tt.args {
+			os.Args = append(os.Args, fmt.Sprintf("-%s %s", arg.name, arg.value))
+		}
 		t.Run(tt.name, func(t *testing.T) {
-			for _, env := range tt.envs {
-				os.Setenv(env.name, env.value)
-			}
 			cfg := Config{}
 			err := cfg.Load()
 			assert.Equal(t, tt.want.config, cfg)
