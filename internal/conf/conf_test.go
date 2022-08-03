@@ -3,20 +3,19 @@ package conf
 import (
 	"fmt"
 	"os"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// flag provided but not defined: -test.paniconexit0
-// https://github.com/golang/go/issues/31859#issuecomment-489889428
-
-var _ = func() bool {
-	testing.Init()
-	return true
-}()
-
 func TestConfig_Load(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	fileStoragePath := wd + "/TestConfig_Load_Storage"
+	defer os.Remove(fileStoragePath)
 	type arg struct {
 		name  string
 		value string
@@ -36,11 +35,11 @@ func TestConfig_Load(t *testing.T) {
 			envs: []arg{},
 			want: want{
 				config: Config{
-					ServerURL: "localhost:8080",
-					BaseURL:   "http://localhost:8080",
-					Address:   "localhost",
-					Port:      8080,
-					Path:      "/",
+					ServerAddress: "localhost:8080",
+					BaseURL:       "http://localhost:8080",
+					Address:       "localhost",
+					Port:          8080,
+					Path:          "/",
 				},
 				err: nil,
 			},
@@ -53,62 +52,122 @@ func TestConfig_Load(t *testing.T) {
 			},
 			want: want{
 				config: Config{
-					ServerURL: "127.0.0.1:8080",
-					BaseURL:   "http://127.0.0.1:8080/short",
-					Address:   "127.0.0.1",
-					Port:      8080,
-					Path:      "/short/",
+					ServerAddress: "127.0.0.1:8080",
+					BaseURL:       "http://127.0.0.1:8080/short",
+					Address:       "127.0.0.1",
+					Port:          8080,
+					Path:          "/short/",
+				},
+				err: nil,
+			},
+		},
+
+		{
+			name: "No envs, correct args",
+			args: []arg{
+				{name: "a", value: "127.0.0.1:8181"},
+				{name: "b", value: "http://127.0.0.1:8181/short"},
+				{name: "f", value: fileStoragePath},
+			},
+			want: want{
+				config: Config{
+					ServerAddress:   "127.0.0.1:8181",
+					BaseURL:         "http://127.0.0.1:8181/short",
+					FileStoragePath: fileStoragePath,
+					Address:         "127.0.0.1",
+					Port:            8181,
+					Path:            "/short/",
 				},
 				err: nil,
 			},
 		},
 		{
-			name: "Wrong SERVER_ADDRESS env, no args",
-			envs: []arg{
-				{name: "SERVER_ADDRESS", value: "127.0.0.1:8080:433"},
-				{name: "BASE_URL", value: "http://127.0.0.1:8080/short"},
+			name: "No envs, missed -a",
+			args: []arg{
+				{name: "b", value: "http://127.0.0.1:8181/short"},
+				{name: "f", value: fileStoragePath},
 			},
 			want: want{
 				config: Config{
-					ServerURL: "127.0.0.1:8080:433",
-					BaseURL:   "http://127.0.0.1:8080/short",
-					Address:   "",
-					Port:      0,
-					Path:      "",
+					ServerAddress:   "localhost:8080",
+					BaseURL:         "http://localhost:8080",
+					FileStoragePath: fileStoragePath,
+					Address:         "localhost",
+					Port:            8080,
+					Path:            "/",
 				},
-				err: fmt.Errorf("invalid SERVER_ADDRESS"),
+				err: nil,
 			},
 		},
 		{
-			name: "Wrong BASE_URL env, no args",
-			envs: []arg{
-				{name: "SERVER_ADDRESS", value: "127.0.0.1:8080"},
-				{name: "BASE_URL", value: "htt://127.0.0.1:8080/short"},
+			name: "No envs, missed -b",
+			args: []arg{
+				{name: "a", value: "127.0.0.1:8181"},
+				{name: "f", value: fileStoragePath},
 			},
 			want: want{
 				config: Config{
-					ServerURL: "127.0.0.1:8080",
-					BaseURL:   "htt://127.0.0.1:8080/short",
-					Address:   "",
-					Port:      0,
-					Path:      "",
+					ServerAddress:   "localhost:8080",
+					BaseURL:         "http://localhost:8080",
+					FileStoragePath: fileStoragePath,
+					Address:         "localhost",
+					Port:            8080,
+					Path:            "/",
 				},
-				err: fmt.Errorf("invalid BASE_URL"),
+				err: nil,
+			},
+		},
+		{
+			name: "No envs, missed -f",
+			args: []arg{
+				{name: "a", value: "127.0.0.1:8181"},
+				{name: "b", value: "http://127.0.0.1:8181/short"},
+			},
+			want: want{
+				config: Config{
+					ServerAddress:   "127.0.0.1:8181",
+					BaseURL:         "http://127.0.0.1:8181/short",
+					FileStoragePath: "",
+					Address:         "127.0.0.1",
+					Port:            8181,
+					Path:            "/short/",
+				},
+				err: nil,
 			},
 		},
 	}
+
+	defaultArgs := os.Args
+	defaultEnvs := os.Environ()
+	mu := &sync.Mutex{}
+
 	for _, tt := range tests {
-		for _, env := range tt.envs {
-			os.Setenv(env.name, env.value)
-		}
-		for _, arg := range tt.args {
-			os.Args = append(os.Args, fmt.Sprintf("-%s %s", arg.name, arg.value))
-		}
 		t.Run(tt.name, func(t *testing.T) {
+			mu.Lock()
+
+			os.Clearenv()
+			for _, env := range defaultEnvs {
+				kv := strings.Split(env, "=")
+				if len(kv) != 2 {
+					continue
+				}
+				os.Setenv(kv[0], kv[1])
+			}
+			for _, env := range tt.envs {
+				os.Setenv(env.name, env.value)
+			}
+
+			os.Args = defaultArgs
+			for _, arg := range tt.args {
+				os.Args = append(os.Args, fmt.Sprintf("-%s=%s", arg.name, arg.value))
+			}
+
 			cfg := Config{}
 			err := cfg.Load()
 			assert.Equal(t, tt.want.config, cfg)
 			assert.Equal(t, tt.want.err, err)
+
+			mu.Unlock()
 		})
 	}
 }

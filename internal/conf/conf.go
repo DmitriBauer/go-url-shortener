@@ -1,39 +1,23 @@
 package conf
 
 import (
-	"flag"
 	"fmt"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/caarlos0/env/v6"
 )
 
-// ...conf.test flag redefined: a [recovered]
-// https://groups.google.com/g/golang-nuts/c/1aZmhhSvwWc
-
 const (
-	serverAddressDefault = "SERVER_ADDRESS_DEFAULT"
-	baseURLDefault       = "BASE_URL_DEFAULT"
+	serverAddressDefault = "localhost:8080"
+	baseURLDefault       = "http://localhost:8080"
 )
-
-var (
-	serverAddress   *string
-	baseURL         *string
-	fileStoragePath *string
-)
-
-func init() {
-	serverAddress = flag.String("a", serverAddressDefault, "server address")
-	baseURL = flag.String("b", baseURLDefault, "base URL")
-	fileStoragePath = flag.String("f", "", "file storage path")
-	flag.Parse()
-}
 
 type Config struct {
-	ServerURL       string `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
-	BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
+	ServerAddress   string `env:"SERVER_ADDRESS"`
+	BaseURL         string `env:"BASE_URL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Address         string
 	Port            int
@@ -44,46 +28,18 @@ type Config struct {
 // If either fails, Load returns an error.
 // The arguments take precedence over the environment variables.
 func (cfg *Config) Load() error {
-	ok, err := cfg.loadArgs()
+	err := cfg.loadEnvs()
 	if err != nil {
 		return err
 	}
 
-	if ok {
-		return nil
-	}
-
-	err = cfg.loadEnvs()
+	err = cfg.loadArgs()
 	if err != nil {
 		return err
 	}
 
+	cfg.check()
 	return nil
-}
-
-func (cfg *Config) loadArgs() (bool, error) {
-	if *serverAddress == serverAddressDefault && *baseURL == baseURLDefault {
-		return false, nil
-	} else if *serverAddress == serverAddressDefault || *baseURL == baseURLDefault {
-		return false, fmt.Errorf("should specify both server address (-a) and base URL (-b)")
-	}
-
-	address, port := parseServerAddress(*serverAddress)
-	if address == "" || port == 0 {
-		return false, fmt.Errorf("invalid server address '-a %s'", *serverAddress)
-	}
-
-	path := parseBaseURL(*baseURL)
-	if path == "" {
-		return false, fmt.Errorf("invalid base URL '-b %s'", *baseURL)
-	}
-
-	cfg.Address = address
-	cfg.Port = port
-	cfg.Path = path
-	cfg.FileStoragePath = *fileStoragePath
-
-	return true, nil
 }
 
 func (cfg *Config) loadEnvs() error {
@@ -105,19 +61,60 @@ func (cfg *Config) loadEnvs() error {
 		return err
 	}
 
-	if address == "" || port == 0 {
-		return fmt.Errorf("invalid SERVER_ADDRESS")
-	}
-
-	if path == "" {
-		return fmt.Errorf("invalid BASE_URL")
-	}
-
 	cfg.Address = address
 	cfg.Port = port
 	cfg.Path = path
 
 	return nil
+}
+
+func (cfg *Config) loadArgs() error {
+	args := map[string]string{}
+	for _, arg := range os.Args {
+		kv := strings.Split(arg, "=")
+		if len(kv) != 2 {
+			continue
+		}
+		args[kv[0]] = kv[1]
+	}
+
+	serverAddress, ok := args["-a"]
+	if ok {
+		address, port := parseServerAddress(serverAddress)
+		if address == "" || port == 0 {
+			return fmt.Errorf("invalid server address '-a %s'", serverAddress)
+		}
+		cfg.ServerAddress = serverAddress
+		cfg.Address = address
+		cfg.Port = port
+	}
+
+	baseURL, ok := args["-b"]
+	if ok {
+		path := parseBaseURL(baseURL)
+		if path == "" {
+			return fmt.Errorf("invalid base URL '-b %s'", baseURL)
+		}
+		cfg.BaseURL = baseURL
+		cfg.Path = path
+	}
+
+	fileStoragePath, ok := args["-f"]
+	if ok {
+		cfg.FileStoragePath = fileStoragePath
+	}
+
+	return nil
+}
+
+func (cfg *Config) check() {
+	if cfg.ServerAddress == "" || cfg.BaseURL == "" {
+		cfg.ServerAddress = "localhost:8080"
+		cfg.BaseURL = "http://localhost:8080"
+		cfg.Address = "localhost"
+		cfg.Port = 8080
+		cfg.Path = "/"
+	}
 }
 
 func parseServerAddress(serverAddress string) (address string, port int) {
