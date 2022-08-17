@@ -12,11 +12,8 @@ func TestRest_shortURL(t *testing.T) {
 	address := "localhost"
 	port := 8080
 	rest := Rest{
-		Address:    address,
-		Port:       port,
-		Path:       "/",
-		URLRepo:    nil,
-		httpServer: nil,
+		Address: address,
+		Port:    port,
 	}
 
 	assert.Equal(t, fmt.Sprintf("http://%s:%d/%s", address, port, urlID), rest.ShortURL(urlID))

@@ -9,14 +9,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	apirest "github.com/dmitribauer/go-url-shortener/internal/api/rest"
+	"github.com/dmitribauer/go-url-shortener/internal/auth"
+	"github.com/dmitribauer/go-url-shortener/internal/reqrep"
 
 	"github.com/dmitribauer/go-url-shortener/internal/urlrep"
 )
 
 func Test_handleRoot_POST(t *testing.T) {
-	urlID := "ID"
 	type args struct {
 		body []byte
 	}
@@ -32,7 +34,7 @@ func Test_handleRoot_POST(t *testing.T) {
 		{
 			name: "POST a correct URL in the body",
 			args: args{[]byte("https://yandex.ru")},
-			want: want{http.StatusCreated, []byte("http://localhost:8080/ID")},
+			want: want{http.StatusCreated, []byte("http://127.0.0.1:8282/s/uRlId123")},
 		},
 		{
 			name: "POST a wrong URL in the body",
@@ -47,20 +49,10 @@ func Test_handleRoot_POST(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			urlIDGenerator := func(url string) string {
-				return urlID
-			}
-			urlRepo := urlrep.NewInMemory(urlIDGenerator)
-			rest := &apirest.Rest{
-				Address: "localhost",
-				Port:    8080,
-				Path:    "/",
-				URLRepo: urlRepo,
-			}
-
+			rest := newTestRest(nil)
 			req := httptest.NewRequest(
 				http.MethodPost,
-				fmt.Sprintf("http://%s:%d", rest.Address, rest.Port),
+				fmt.Sprintf("http://%s:%d%s", rest.Address, rest.Port, rest.Path),
 				bytes.NewReader(tt.args.body),
 			)
 			w := httptest.NewRecorder()
@@ -116,11 +108,16 @@ func Test_handleRoot_GET(t *testing.T) {
 		return id
 	}
 	urlRepo := urlrep.NewInMemory(urlIDGenerator)
+	reqRepo, err := reqrep.NewInFile("/tmp/reqrep/")
+	require.NoError(t, err)
+
 	rest := &apirest.Rest{
-		Address: "localhost",
-		Port:    8080,
-		Path:    "/",
-		URLRepo: urlRepo,
+		Address:     "localhost",
+		Port:        8080,
+		Path:        "",
+		URLRepo:     urlRepo,
+		ReqRepo:     reqRepo,
+		AuthService: auth.NewService(nil),
 	}
 
 	req := httptest.NewRequest(

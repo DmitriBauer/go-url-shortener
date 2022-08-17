@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"errors"
 	"io"
 	"net/http"
 
 	"github.com/dmitribauer/go-url-shortener/internal/api/rest"
+	"github.com/dmitribauer/go-url-shortener/internal/reqrep"
+	"github.com/dmitribauer/go-url-shortener/internal/urlrep"
 	"github.com/dmitribauer/go-url-shortener/internal/util"
 )
 
@@ -39,19 +42,37 @@ func handleRootPost(rest *rest.Rest, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	urlID, err := rest.URLRepo.Save(url)
+	var statusCode int
+
+	urlID, err := rest.URLRepo.Save(r.Context(), url)
+	if err == nil {
+		statusCode = http.StatusCreated
+	} else if errors.Is(err, urlrep.ErrDuplicateURL) {
+		statusCode = http.StatusConflict
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	shortURL := rest.ShortURL(urlID)
+
+	err = rest.ReqRepo.Save(reqrep.Req{
+		SessionID:   sessionIDFromRequest(rest, w, r),
+		ShortURL:    shortURL,
+		OriginalURL: url,
+	})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(rest.ShortURL(urlID)))
+	w.WriteHeader(statusCode)
+	w.Write([]byte(shortURL))
 }
 
 func handleRootGet(rest *rest.Rest, w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
-	baseLen := len(rest.Path)
+	baseLen := len(rest.Path + "/")
 	if len(path) <= baseLen {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -59,7 +80,7 @@ func handleRootGet(rest *rest.Rest, w http.ResponseWriter, r *http.Request) {
 
 	id := path[baseLen:]
 
-	url, ok := rest.URLRepo.URLByID(id)
+	url, ok := rest.URLRepo.URLByID(r.Context(), id)
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		return

@@ -1,6 +1,7 @@
 package urlrep
 
 import (
+	"context"
 	"os"
 	"reflect"
 	"testing"
@@ -37,13 +38,13 @@ func TestInFileURLRepo_URLByID(t *testing.T) {
 		urlIDGenerator: urlIDGenerator,
 	}
 
-	u, ok := r.URLByID(id)
+	u, ok := r.URLByID(context.TODO(), id)
 	require.Equal(t, "", u)
 	require.Equal(t, false, ok)
 
-	r.Save(url)
+	r.Save(context.TODO(), url)
 
-	u, ok = r.URLByID(id)
+	u, ok = r.URLByID(context.TODO(), id)
 	assert.Equal(t, url, u)
 	assert.Equal(t, true, ok)
 }
@@ -65,15 +66,54 @@ func TestInFileURLRepo_Save(t *testing.T) {
 		urlIDGenerator: urlIDGenerator,
 	}
 
-	u, ok := r.URLByID(id)
+	u, ok := r.URLByID(context.TODO(), id)
 	require.Equal(t, "", u)
 	require.Equal(t, false, ok)
 
-	urlID, _ := r.Save(url)
+	urlID, _ := r.Save(context.TODO(), url)
 
-	u, ok = r.URLByID(id)
+	u, ok = r.URLByID(context.TODO(), id)
 	assert.Equal(t, id, urlID)
 	assert.Equal(t, url, u)
+	assert.Equal(t, true, ok)
+}
+
+func TestInFileURLRepo_SaveList(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	path := wd + "/TestInFileURLRepo_SaveList"
+	defer os.Remove(path)
+
+	ctx := context.TODO()
+	urls := []string{
+		"https://www.yandex.ru",
+		"https://www.google.com",
+	}
+	urlIDGenerator := func(url string) string {
+		switch url {
+		case "https://www.yandex.ru":
+			return "yaID"
+		case "https://www.google.com":
+			return "googleID"
+		default:
+			return "ID"
+		}
+	}
+	r := &inFileURLRepo{
+		path:           path,
+		urlIDGenerator: urlIDGenerator,
+	}
+
+	ids, err := r.SaveList(ctx, urls)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"yaID", "googleID"}, ids)
+
+	u, ok := r.URLByID(ctx, "yaID")
+	assert.Equal(t, "https://www.yandex.ru", u)
+	assert.Equal(t, true, ok)
+
+	u, ok = r.URLByID(ctx, "googleID")
+	assert.Equal(t, "https://www.google.com", u)
 	assert.Equal(t, true, ok)
 }
 
