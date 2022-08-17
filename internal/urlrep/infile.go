@@ -2,6 +2,7 @@ package urlrep
 
 import (
 	"bufio"
+	"context"
 	"log"
 	"os"
 	"strings"
@@ -39,7 +40,7 @@ func NewInFile(path string, urlIDGenerator func(url string) string) (URLRepo, er
 	}, nil
 }
 
-func (r *inFileURLRepo) URLByID(id string) (string, bool) {
+func (r *inFileURLRepo) URLByID(ctx context.Context, id string) (string, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -61,7 +62,7 @@ func (r *inFileURLRepo) URLByID(id string) (string, bool) {
 	return "", false
 }
 
-func (r *inFileURLRepo) Save(url string) (string, error) {
+func (r *inFileURLRepo) Save(ctx context.Context, url string) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -78,6 +79,18 @@ func (r *inFileURLRepo) Save(url string) (string, error) {
 	}
 
 	return id, nil
+}
+
+func (r *inFileURLRepo) SaveList(ctx context.Context, urls []string) ([]string, error) {
+	idxs := make([]string, len(urls))
+	for i, url := range urls {
+		idx, err := r.Save(ctx, url)
+		if err != nil {
+			return nil, err
+		}
+		idxs[i] = idx
+	}
+	return idxs, nil
 }
 
 func (r *inFileURLRepo) GenerateID(url string) string {

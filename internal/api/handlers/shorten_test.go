@@ -9,13 +9,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	apirest "github.com/dmitribauer/go-url-shortener/internal/api/rest"
-	"github.com/dmitribauer/go-url-shortener/internal/urlrep"
 )
 
 func Test_HandleShorten_POST(t *testing.T) {
-	urlID := "ID"
 	type args struct {
 		contentType string
 		body        string
@@ -32,7 +28,7 @@ func Test_HandleShorten_POST(t *testing.T) {
 		{
 			name: "POST a correct URL in the body and the application/json as content type",
 			args: args{"application/json", `{"url": "https://yandex.ru"}`},
-			want: want{http.StatusCreated, shortenResBody{Result: fmt.Sprintf("http://localhost:8080/%s", urlID)}},
+			want: want{http.StatusCreated, shortenResBody{Result: "http://127.0.0.1:8282/s/uRlId123"}},
 		},
 		{
 			name: "POST a correct URL in the body and a wrong content-type (text/plain)",
@@ -52,20 +48,11 @@ func Test_HandleShorten_POST(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			urlIDGenerator := func(url string) string {
-				return urlID
-			}
-			urlRepo := urlrep.NewInMemory(urlIDGenerator)
-			rest := &apirest.Rest{
-				Address: "localhost",
-				Port:    8080,
-				Path:    "/",
-				URLRepo: urlRepo,
-			}
+			rest := newTestRest(nil)
 
 			req := httptest.NewRequest(
 				http.MethodPost,
-				fmt.Sprintf("http://%s:%d", rest.Address, rest.Port),
+				fmt.Sprintf("http://%s:%d%s/api/shorten", rest.Address, rest.Port, rest.Path),
 				bytes.NewReader(json.RawMessage(tt.args.body)),
 			)
 			req.Header.Set("Content-Type", tt.args.contentType)
@@ -79,10 +66,7 @@ func Test_HandleShorten_POST(t *testing.T) {
 
 			defer res.Body.Close()
 			var body shortenResBody
-			err := json.NewDecoder(res.Body).Decode(&body)
-			if err != nil {
-				assert.Error(t, err)
-			}
+			json.NewDecoder(res.Body).Decode(&body)
 
 			assert.Equal(t, tt.want.body, body)
 		})

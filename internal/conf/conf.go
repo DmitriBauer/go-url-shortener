@@ -19,6 +19,8 @@ type Config struct {
 	ServerAddress   string `env:"SERVER_ADDRESS"`
 	BaseURL         string `env:"BASE_URL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	ReqRepoDir      string `env:"REQREP_DIR"`
+	DatabaseAddress string `env:"DATABASE_DSN"`
 	Address         string
 	Port            int
 	Path            string
@@ -39,10 +41,13 @@ func (cfg *Config) Load() error {
 	}
 
 	cfg.check()
+
 	return nil
 }
 
 func (cfg *Config) loadEnvs() error {
+	var serverAddress string
+	var baseURL string
 	var address string
 	var port int
 	var path string
@@ -50,9 +55,11 @@ func (cfg *Config) loadEnvs() error {
 	err := env.Parse(cfg, env.Options{
 		OnSet: func(tag string, value interface{}, isDefault bool) {
 			if tag == "SERVER_ADDRESS" {
-				address, port = parseServerAddress(value.(string))
+				serverAddress = value.(string)
+				address, port = parseServerAddress(serverAddress)
 			} else if tag == "BASE_URL" {
-				path = parseBaseURL(value.(string))
+				baseURL = value.(string)
+				path = parseBaseURL(baseURL)
 			}
 		},
 	})
@@ -61,6 +68,8 @@ func (cfg *Config) loadEnvs() error {
 		return err
 	}
 
+	cfg.ServerAddress = serverAddress
+	cfg.BaseURL = baseURL
 	cfg.Address = address
 	cfg.Port = port
 	cfg.Path = path
@@ -72,10 +81,14 @@ func (cfg *Config) loadArgs() error {
 	args := map[string]string{}
 	for _, arg := range os.Args {
 		kv := strings.Split(arg, "=")
-		if len(kv) != 2 {
+		lenkv := len(kv)
+		if lenkv == 2 {
+			args[kv[0]] = kv[1]
+		} else if lenkv > 2 {
+			args[kv[0]] = strings.Join(kv[1:], "=")
+		} else {
 			continue
 		}
-		args[kv[0]] = kv[1]
 	}
 
 	serverAddress, ok := args["-a"]
@@ -92,9 +105,6 @@ func (cfg *Config) loadArgs() error {
 	baseURL, ok := args["-b"]
 	if ok {
 		path := parseBaseURL(baseURL)
-		if path == "" {
-			return fmt.Errorf("invalid base URL '-b %s'", baseURL)
-		}
 		cfg.BaseURL = baseURL
 		cfg.Path = path
 	}
@@ -104,16 +114,31 @@ func (cfg *Config) loadArgs() error {
 		cfg.FileStoragePath = fileStoragePath
 	}
 
+	reqDir, ok := args["-rrd"]
+	if ok {
+		cfg.ReqRepoDir = reqDir
+	}
+
+	dbAddress, ok := args["-d"]
+	if ok {
+		cfg.DatabaseAddress = dbAddress
+	}
+
 	return nil
 }
 
 func (cfg *Config) check() {
-	if cfg.ServerAddress == "" || cfg.BaseURL == "" {
+	if cfg.ServerAddress == "" {
 		cfg.ServerAddress = "localhost:8080"
-		cfg.BaseURL = "http://localhost:8080"
 		cfg.Address = "localhost"
 		cfg.Port = 8080
-		cfg.Path = "/"
+	}
+	if cfg.BaseURL == "" {
+		cfg.BaseURL = "http://localhost:8080"
+		cfg.Path = ""
+	}
+	if cfg.ReqRepoDir == "" {
+		cfg.ReqRepoDir = "/tmp/reqrep/"
 	}
 }
 
@@ -138,8 +163,8 @@ func parseBaseURL(baseURL string) (path string) {
 	if lastChIdx < 0 {
 		return
 	}
-	if baseURL[lastChIdx] != '/' {
-		baseURL += "/"
+	if baseURL[lastChIdx] == '/' {
+		baseURL = baseURL[:lastChIdx]
 	}
 
 	u, err := url.ParseRequestURI(baseURL)

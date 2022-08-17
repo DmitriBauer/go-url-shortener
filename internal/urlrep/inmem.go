@@ -1,6 +1,7 @@
 package urlrep
 
 import (
+	"context"
 	"sync"
 
 	"github.com/google/uuid"
@@ -23,7 +24,7 @@ func NewInMemory(urlIDGenerator func(url string) string) URLRepo {
 	}
 }
 
-func (r *inMemURLRepo) URLByID(id string) (string, bool) {
+func (r *inMemURLRepo) URLByID(ctx context.Context, id string) (string, bool) {
 	url, ok := r.urls.Load(id)
 	if !ok {
 		return "", false
@@ -31,13 +32,25 @@ func (r *inMemURLRepo) URLByID(id string) (string, bool) {
 	return url.(string), true
 }
 
-func (r *inMemURLRepo) Save(url string) (string, error) {
+func (r *inMemURLRepo) Save(ctx context.Context, url string) (string, error) {
 	id := r.GenerateID(url)
 	if _, ok := r.urls.Load(id); ok {
-		return r.Save(url)
+		return r.Save(ctx, url)
 	}
 	r.urls.Store(id, url)
 	return id, nil
+}
+
+func (r *inMemURLRepo) SaveList(ctx context.Context, urls []string) ([]string, error) {
+	idxs := make([]string, len(urls))
+	for i, url := range urls {
+		idx, err := r.Save(ctx, url)
+		if err != nil {
+			return nil, err
+		}
+		idxs[i] = idx
+	}
+	return idxs, nil
 }
 
 func (r *inMemURLRepo) GenerateID(url string) string {
