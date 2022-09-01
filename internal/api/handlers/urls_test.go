@@ -109,3 +109,61 @@ func TestHandleURLsGet(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleURLsDelete(t *testing.T) {
+	type args struct {
+		body []byte
+	}
+	type want struct {
+		code int
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "body is empty",
+			want: want{
+				code: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "body is not empty",
+			args: args{
+				body: []byte(`["f85516fe", "a23eb735"]`),
+			},
+			want: want{
+				code: http.StatusAccepted,
+			},
+		},
+		{
+			name: "body is not json",
+			args: args{
+				body: []byte(`["f85516fe", "a23eb`),
+			},
+			want: want{
+				code: http.StatusBadRequest,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rest := newTestRest(&apirest.Rest{})
+			req := httptest.NewRequest(
+				http.MethodDelete,
+				fmt.Sprintf("http://%s:%d%s/api/user/urls", rest.Address, rest.Port, rest.Path),
+				bytes.NewReader(tt.args.body),
+			)
+			w := httptest.NewRecorder()
+
+			HandleURLsDelete(rest, w, req)
+
+			res := w.Result()
+			defer res.Body.Close() // statictest
+
+			assert.Equal(t, tt.want.code, res.StatusCode)
+		})
+	}
+}

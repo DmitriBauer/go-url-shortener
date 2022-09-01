@@ -16,29 +16,48 @@ func TestNewInMemory(t *testing.T) {
 }
 
 func TestInMemURLRepo_URLByID(t *testing.T) {
-	id := "ID"
-	url := "https://www.yandex.ru"
+	defaultID, yaID, googleID := "ID", "yaID", "googleID"
+	yaURL, googleURL := "https://www.yandex.ru", "https://www.google.com"
+	sessionID := "1bd118e2-a59b-4110-b315-8e191b16e41c"
+	ctx := context.TODO()
+
 	urlIDGenerator := func(url string) string {
-		return id
+		switch url {
+		case yaURL:
+			return yaID
+		case googleURL:
+			return googleID
+		default:
+			return defaultID
+		}
 	}
 	r := &inMemURLRepo{
 		urlIDGenerator: urlIDGenerator,
 	}
 
-	u, ok := r.URLByID(context.TODO(), id)
+	u, _ := r.URLByID(ctx, yaID)
 	require.Equal(t, "", u)
-	require.Equal(t, false, ok)
 
-	r.Save(context.TODO(), url)
+	u, _ = r.URLByID(ctx, googleID)
+	require.Equal(t, "", u)
 
-	u, ok = r.URLByID(context.TODO(), id)
-	assert.Equal(t, url, u)
-	assert.Equal(t, true, ok)
+	r.Save(ctx, yaURL, sessionID)
+	r.Save(ctx, googleURL, sessionID)
+	r.RemoveList(ctx, []string{yaID}, sessionID)
+
+	u, removed := r.URLByID(ctx, yaID)
+	assert.Equal(t, yaURL, u)
+	assert.Equal(t, true, removed)
+
+	u, removed = r.URLByID(ctx, googleID)
+	assert.Equal(t, googleURL, u)
+	assert.Equal(t, false, removed)
 }
 
 func TestInMemURLRepo_Save(t *testing.T) {
 	id := "ID"
 	url := "https://www.yandex.ru"
+	sessionID := "1bd118e2-a59b-4110-b315-8e191b16e41c"
 	urlIDGenerator := func(url string) string {
 		return id
 	}
@@ -46,16 +65,15 @@ func TestInMemURLRepo_Save(t *testing.T) {
 		urlIDGenerator: urlIDGenerator,
 	}
 
-	u, ok := r.URLByID(context.TODO(), id)
+	u, _ := r.URLByID(context.TODO(), id)
 	require.Equal(t, "", u)
-	require.Equal(t, false, ok)
 
-	urlID, _ := r.Save(context.TODO(), url)
+	urlID, _ := r.Save(context.TODO(), url, sessionID)
 
-	u, ok = r.URLByID(context.TODO(), id)
+	u, removed := r.URLByID(context.TODO(), id)
 	assert.Equal(t, id, urlID)
 	assert.Equal(t, url, u)
-	assert.Equal(t, true, ok)
+	assert.Equal(t, false, removed)
 }
 
 func TestInMemURLRepo_SaveList(t *testing.T) {
@@ -78,18 +96,44 @@ func TestInMemURLRepo_SaveList(t *testing.T) {
 		urlIDGenerator: urlIDGenerator,
 	}
 
-	ids, err := r.SaveList(ctx, urls)
+	ids, err := r.SaveList(ctx, urls, "1bd118e2-a59b-4110-b315-8e191b16e41c")
 	require.NoError(t, err)
 	assert.Equal(t, []string{"yaID", "googleID"}, ids)
 
-	u, ok := r.URLByID(ctx, "yaID")
+	u, removed := r.URLByID(ctx, "yaID")
 	assert.Equal(t, "https://www.yandex.ru", u)
-	assert.Equal(t, true, ok)
+	assert.Equal(t, false, removed)
 
-	u, ok = r.URLByID(ctx, "googleID")
+	u, removed = r.URLByID(ctx, "googleID")
 	assert.Equal(t, "https://www.google.com", u)
-	assert.Equal(t, true, ok)
+	assert.Equal(t, false, removed)
 
+}
+
+func TestInMemURLRepo_RemoveList(t *testing.T) {
+	id := "ID"
+	url := "https://www.yandex.ru"
+	sessionID := "1bd118e2-a59b-4110-b315-8e191b16e41c"
+	ctx := context.TODO()
+
+	urlIDGenerator := func(url string) string {
+		return id
+	}
+	r := &inMemURLRepo{
+		urlIDGenerator: urlIDGenerator,
+	}
+
+	r.Save(ctx, url, sessionID)
+
+	u, removed := r.URLByID(ctx, id)
+	require.Equal(t, url, u)
+	require.Equal(t, false, removed)
+
+	r.RemoveList(ctx, []string{id}, sessionID)
+
+	u, removed = r.URLByID(ctx, id)
+	assert.Equal(t, url, u)
+	assert.Equal(t, true, removed)
 }
 
 func TestInMemURLRepo_GenerateID(t *testing.T) {

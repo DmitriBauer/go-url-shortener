@@ -3,6 +3,7 @@ package urlrep
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -54,15 +55,18 @@ func (r *inFileURLRepo) URLByID(ctx context.Context, id string) (string, bool) {
 	s.Split(newInFileSplitter().scanLinesInReverse)
 	for s.Scan() {
 		line := strings.Split(s.Text(), " ")
+		if lineIsNotValid(line) {
+			continue
+		}
 		if line[0] == id {
-			return line[1], true
+			return line[1], line[3] == "1"
 		}
 	}
 
 	return "", false
 }
 
-func (r *inFileURLRepo) Save(ctx context.Context, url string) (string, error) {
+func (r *inFileURLRepo) Save(ctx context.Context, url string, sessionID string) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -73,7 +77,7 @@ func (r *inFileURLRepo) Save(ctx context.Context, url string) (string, error) {
 	}
 
 	id := r.GenerateID(url)
-	_, err = f.WriteString(id + " " + url + "\n")
+	_, err = f.WriteString(fmt.Sprintf("%s %s %s %s\n", id, url, sessionID, "0"))
 	if err != nil {
 		return "", err
 	}
@@ -81,16 +85,54 @@ func (r *inFileURLRepo) Save(ctx context.Context, url string) (string, error) {
 	return id, nil
 }
 
-func (r *inFileURLRepo) SaveList(ctx context.Context, urls []string) ([]string, error) {
+func (r *inFileURLRepo) SaveList(ctx context.Context, urls []string, sessionID string) ([]string, error) {
 	idxs := make([]string, len(urls))
 	for i, url := range urls {
-		idx, err := r.Save(ctx, url)
+		idx, err := r.Save(ctx, url, sessionID)
 		if err != nil {
 			return nil, err
 		}
 		idxs[i] = idx
 	}
 	return idxs, nil
+}
+
+func (r *inFileURLRepo) RemoveList(ctx context.Context, ids []string, sessionID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	f, err := os.OpenFile(r.path, os.O_RDWR|os.O_CREATE, 0777)
+	if err != nil {
+		return err
+	}
+	defer r.closeFile(f)
+
+	offset := 0
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		text := s.Text()
+		line := strings.Split(text, " ")
+		if lineIsNotValid(line) {
+			continue
+		}
+		got := false
+
+		offset += len(text) + 1
+
+		for _, id := range ids {
+			if line[0] == id {
+				got = true
+			}
+		}
+
+		if !got || line[2] != sessionID {
+			continue
+		}
+
+		f.WriteAt([]byte("1"), int64(offset-2))
+	}
+
+	return nil
 }
 
 func (r *inFileURLRepo) GenerateID(url string) string {
@@ -102,4 +144,8 @@ func (r *inFileURLRepo) closeFile(f *os.File) {
 	if err != nil {
 		log.Default().Println("failed to close file:", err)
 	}
+}
+
+func lineIsNotValid(line []string) bool {
+	return len(line) != 4
 }
