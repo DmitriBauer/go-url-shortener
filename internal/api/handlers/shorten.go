@@ -39,9 +39,11 @@ func HandleShortenPost(rest *rest.Rest, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	sessionID := sessionIDFromRequest(rest, w, r)
+
 	var statusCode int
 
-	urlID, err := rest.URLRepo.Save(r.Context(), reqBody.URL)
+	urlID, err := rest.URLRepo.Save(r.Context(), reqBody.URL, sessionID)
 	if err == nil {
 		statusCode = http.StatusCreated
 	} else if errors.Is(err, urlrep.ErrDuplicateURL) {
@@ -56,7 +58,7 @@ func HandleShortenPost(rest *rest.Rest, w http.ResponseWriter, r *http.Request) 
 	}
 
 	err = rest.ReqRepo.Save(reqrep.Req{
-		SessionID:   sessionIDFromRequest(rest, w, r),
+		SessionID:   sessionID,
 		ShortURL:    resBody.Result,
 		OriginalURL: reqBody.URL,
 	})

@@ -51,5 +51,9 @@ func Run(rest *rest.Rest, address string, port int, path string) error {
 		mux.Post(rest.Path+"/api/shorten/batch", func(writer http.ResponseWriter, request *http.Request) {
 			handlers.HandleShortenBatchPost(rest, writer, request)
 		})
+
+		mux.Delete(rest.Path+"/api/user/urls", func(writer http.ResponseWriter, request *http.Request) {
+			handlers.HandleURLsDelete(rest, writer, request)
+		})
 	})
 }

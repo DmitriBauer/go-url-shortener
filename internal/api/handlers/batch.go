@@ -35,7 +35,7 @@ func HandleShortenBatchPost(rest *rest.Rest, w http.ResponseWriter, r *http.Requ
 		urls[i] = entry.URL
 	}
 
-	urlIDs, err := rest.URLRepo.SaveList(r.Context(), urls)
+	urlIDs, err := rest.URLRepo.SaveList(r.Context(), urls, sessionIDFromRequest(rest, w, r))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

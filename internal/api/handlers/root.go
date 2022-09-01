@@ -42,9 +42,11 @@ func handleRootPost(rest *rest.Rest, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sessionID := sessionIDFromRequest(rest, w, r)
+
 	var statusCode int
 
-	urlID, err := rest.URLRepo.Save(r.Context(), url)
+	urlID, err := rest.URLRepo.Save(r.Context(), url, sessionID)
 	if err == nil {
 		statusCode = http.StatusCreated
 	} else if errors.Is(err, urlrep.ErrDuplicateURL) {
@@ -57,7 +59,7 @@ func handleRootPost(rest *rest.Rest, w http.ResponseWriter, r *http.Request) {
 	shortURL := rest.ShortURL(urlID)
 
 	err = rest.ReqRepo.Save(reqrep.Req{
-		SessionID:   sessionIDFromRequest(rest, w, r),
+		SessionID:   sessionID,
 		ShortURL:    shortURL,
 		OriginalURL: url,
 	})
@@ -80,9 +82,13 @@ func handleRootGet(rest *rest.Rest, w http.ResponseWriter, r *http.Request) {
 
 	id := path[baseLen:]
 
-	url, ok := rest.URLRepo.URLByID(r.Context(), id)
-	if !ok {
+	url, removed := rest.URLRepo.URLByID(r.Context(), id)
+	if url == "" {
 		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if removed {
+		w.WriteHeader(http.StatusGone)
 		return
 	}
 
